@@ -69,7 +69,7 @@ export function HeaderMenu({
           Home
         </NavLink>
       )}
-      {(menu || FALLBACK_HEADER_MENU).items.map((item) => {
+      {(FALLBACK_HEADER_MENU).items.map((item) => {
         if (!item.url) return null;
 
         // if the url is internal, we strip the domain
@@ -178,6 +178,33 @@ const FALLBACK_HEADER_MENU = {
   id: 'gid://shopify/Menu/199655587896',
   items: [
     {
+      id: 'gid://shopify/MenuItem/494783037462',
+      resourceId: 'gid://shopify/Collection/429493780502',
+      tags: [],
+      title: 'Men',
+      type: 'COLLECTION',
+      url: 'https://demostore.mock.shop/collections/men/',
+      items: [],
+    },
+    {
+      id: 'gid://shopify/MenuItem/49478307023',
+      resourceId: 'gid://shopify/Collection/429493813270',
+      tags: [],
+      title: 'Women',
+      type: 'COLLECTION',
+      url: 'https://demostore.mock.shop/collections/women/',
+      items: [],
+    },
+    {
+      id: 'gid://shopify/MenuItem/49487967029',
+      resourceId: 'gid://shopify/Collection/429493846038',
+      tags: [],
+      title: 'Unisex',
+      type: 'COLLECTION',
+      url: 'https://demostore.mock.shop/collections/unisex/',
+      items: [],
+    },
+    {
       id: 'gid://shopify/MenuItem/461609500728',
       resourceId: null,
       tags: [],
@@ -190,27 +217,18 @@ const FALLBACK_HEADER_MENU = {
       id: 'gid://shopify/MenuItem/461609533496',
       resourceId: null,
       tags: [],
-      title: 'Blog',
+      title: 'All Products',
       type: 'HTTP',
-      url: '/blogs/journal',
+      url: '/collections/all',
       items: [],
     },
     {
-      id: 'gid://shopify/MenuItem/461609566264',
-      resourceId: null,
+      id: 'gid://shopify/MenuItem/496942546966',
+      resourceId: 'gid://shopify/Blog/91450966038',
       tags: [],
-      title: 'Policies',
-      type: 'HTTP',
-      url: '/policies',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461609599032',
-      resourceId: 'gid://shopify/Page/92591030328',
-      tags: [],
-      title: 'About',
-      type: 'PAGE',
-      url: '/pages/about',
+      title: 'News',
+      type: 'BLOG',
+      url: 'https://demostore.mock.shop/blogs/news',
       items: [],
     },
   ],

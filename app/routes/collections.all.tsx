@@ -1,9 +1,11 @@
 import {defer, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
-import {useLoaderData, Link, type MetaFunction} from '@remix-run/react';
+import {useLoaderData, Link, type MetaFunction, useSearchParams} from '@remix-run/react';
 import {getPaginationVariables, Image, Money} from '@shopify/hydrogen';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {useVariantUrl} from '~/lib/variants';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {SelectMenu} from '~/components/SelectMenu';
+import { useState } from 'react';
 
 export const meta: MetaFunction<typeof loader> = () => {
   return [{title: `Hydrogen | Products`}];
@@ -28,10 +30,16 @@ async function loadCriticalData({context, request}: LoaderFunctionArgs) {
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 8,
   });
+  const url = new URL(request.url)
+  var GlobalSortKey = url.searchParams.get('sort');
 
   const [{products}] = await Promise.all([
     storefront.query(CATALOG_QUERY, {
-      variables: {...paginationVariables},
+      variables: {
+        sortKey:GlobalSortKey?'PRICE':null,
+        reverse:(GlobalSortKey === 'high')?true:false,
+        ...paginationVariables
+      },
     }),
     // Add other queries here, so that they are loaded in parallel
   ]);
@@ -49,10 +57,68 @@ function loadDeferredData({context}: LoaderFunctionArgs) {
 
 export default function Collection() {
   const {products} = useLoaderData<typeof loader>();
+  let [searchParams, setSearchParams] = useSearchParams();
+
+  const setSort = () => {
+    switch (searchParams.toString()){
+      case 'sort=low':
+        return "Price L-H";
+        break;
+      case 'sort=high':
+        return "Price H-L";
+        break;
+      default:
+        return "Featured"
+    }
+  }
+
+  const [sortCollection, setSortCollection] = useState(setSort());
+
+  const options = [
+    'Featured',
+    'Price L-H',
+    'Price H-L'
+  ];
+
+  const handleURLSort = (type:string) => {
+    if (type === 'default') {
+      const url = window.location.href.split('?')[0];
+      window.location.href = url;
+      return;
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set('sort',type);
+      window.location.href = url.toString();
+    }
+  }
+
+  const menuSelectAction = (type:string) => {
+    setSortCollection(type);
+    switch(type) {
+      case 'Featured':
+        handleURLSort('default');
+        break;
+      case 'Price L-H':
+        handleURLSort('low');
+        break;
+      case 'Price H-L':
+        handleURLSort('high');
+        break;
+    }    
+  }
+
 
   return (
     <div className="collection">
       <h1>Products</h1>
+      <div className='sort-options'>
+        <h4>sort products by</h4>
+        <SelectMenu
+          list={options}
+          action={menuSelectAction}
+          state={sortCollection}
+        />
+      </div>
       <PaginatedResourceSection
         connection={products}
         resourcesClassName="products-grid"
@@ -139,6 +205,7 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
 
 // NOTE: https://shopify.dev/docs/api/storefront/2024-01/objects/product
 const CATALOG_QUERY = `#graphql
+  ${PRODUCT_ITEM_FRAGMENT}
   query Catalog(
     $country: CountryCode
     $language: LanguageCode
@@ -146,8 +213,17 @@ const CATALOG_QUERY = `#graphql
     $last: Int
     $startCursor: String
     $endCursor: String
+    $sortKey: ProductSortKeys
+    $reverse: Boolean
   ) @inContext(country: $country, language: $language) {
-    products(first: $first, last: $last, before: $startCursor, after: $endCursor) {
+    products(
+      first: $first,
+      last: $last,
+      before: $startCursor,
+      after: $endCursor,
+      sortKey: $sortKey,
+      reverse: $reverse
+    ) {
       nodes {
         ...ProductItem
       }
@@ -159,5 +235,4 @@ const CATALOG_QUERY = `#graphql
       }
     }
   }
-  ${PRODUCT_ITEM_FRAGMENT}
 ` as const;

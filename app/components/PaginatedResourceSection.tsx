@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import * as React from 'react';
 import {Pagination} from '@shopify/hydrogen';
 
@@ -14,6 +15,20 @@ export function PaginatedResourceSection<NodesType>({
   children: React.FunctionComponent<{node: NodesType; index: number}>;
   resourcesClassName?: string;
 }) {
+
+
+  useEffect(() => {
+    const onscroll = () => {
+      const scrolledTo = window.scrollY + window.innerHeight;
+      const isReachBottom = document.body.scrollHeight - 300  <= scrolledTo;
+      // if (isReachBottom) alert("reached bottom");
+    };
+    window.addEventListener("scroll", onscroll);
+    return () => {
+      window.removeEventListener("scroll", onscroll);
+    };
+  }, []);
+
   return (
     <Pagination connection={connection}>
       {({nodes, isLoading, PreviousLink, NextLink}) => {

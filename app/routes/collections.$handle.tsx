@@ -1,5 +1,10 @@
-import {defer, redirect, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
-import {useLoaderData, Link, type MetaFunction} from '@remix-run/react';
+import {
+  defer,
+  redirect,
+  type LoaderFunctionArgs,
+} from '@shopify/remix-oxygen';
+import {useLoaderData, Link, type MetaFunction, useSearchParams} from '@remix-run/react';
+import { useState } from 'react';
 import {
   getPaginationVariables,
   Image,
@@ -9,6 +14,8 @@ import {
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {useVariantUrl} from '~/lib/variants';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import '../styles/shopStyle.css';
+import {SelectMenu} from '~/components/SelectMenu';
 
 export const meta: MetaFunction<typeof loader> = ({data}) => {
   return [{title: `Hydrogen | ${data?.collection.title ?? ''} Collection`}];
@@ -21,7 +28,7 @@ export async function loader(args: LoaderFunctionArgs) {
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
-  return defer({...deferredData, ...criticalData});
+  return defer({...criticalData});
 }
 
 /**
@@ -35,6 +42,10 @@ async function loadCriticalData({
 }: LoaderFunctionArgs) {
   const {handle} = params;
   const {storefront} = context;
+
+  const url = new URL(request.url)
+  var GlobalSortKey = url.searchParams.get('sort');
+
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 8,
   });
@@ -45,9 +56,16 @@ async function loadCriticalData({
 
   const [{collection}] = await Promise.all([
     storefront.query(COLLECTION_QUERY, {
-      variables: {handle, ...paginationVariables},
-      // Add other queries here, so that they are loaded in parallel
+      variables: {
+        handle,
+        sortKey:GlobalSortKey?'PRICE':null,
+        reverse:(GlobalSortKey === 'high')?true:false,
+        ...paginationVariables
+      },
     }),
+    
+    // Add other queries here, so that they are loaded in parallel
+
   ]);
 
   if (!collection) {
@@ -57,7 +75,7 @@ async function loadCriticalData({
   }
 
   return {
-    collection,
+    collection
   };
 }
 
@@ -66,17 +84,74 @@ async function loadCriticalData({
  * fetched after the initial page load. If it's unavailable, the page should still 200.
  * Make sure to not throw any errors here, as it will cause the page to 500.
  */
-function loadDeferredData({context}: LoaderFunctionArgs) {
+async function loadDeferredData({context, params}: LoaderFunctionArgs) {
   return {};
 }
 
 export default function Collection() {
+  let [searchParams, setSearchParams] = useSearchParams();
+
+  const setSort = () => {
+    switch (searchParams.toString()){
+      case 'sort=low':
+        return "Price L-H";
+        break;
+      case 'sort=high':
+        return "Price H-L";
+        break;
+      default:
+        return "Featured"
+    }
+  }
+
   const {collection} = useLoaderData<typeof loader>();
+  const [sortCollection, setSortCollection] = useState(setSort());
+
+  const options = [
+    'Featured',
+    'Price L-H',
+    'Price H-L'
+  ];
+
+  const handleURLSort = (type:string) => {
+    if (type === 'default') {
+      const url = window.location.href.split('?')[0];
+      window.location.href = url;
+      return;
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set('sort',type);
+      window.location.href = url.toString();
+    }
+  }
+
+  const menuSelectAction = (type:string) => {
+    setSortCollection(type);
+    switch(type) {
+      case 'Featured':
+        handleURLSort('default');
+        break;
+      case 'Price L-H':
+        handleURLSort('low');
+        break;
+      case 'Price H-L':
+        handleURLSort('high');
+        break;
+    }    
+  }
 
   return (
     <div className="collection">
       <h1>{collection.title}</h1>
       <p className="collection-description">{collection.description}</p>
+      <div className='sort-options'>
+        <h4>sort products by</h4>
+        <SelectMenu
+          list={options}
+          action={menuSelectAction}
+          state={sortCollection}
+        />
+      </div>
       <PaginatedResourceSection
         connection={collection.products}
         resourcesClassName="products-grid"
@@ -180,6 +255,8 @@ const COLLECTION_QUERY = `#graphql
     $last: Int
     $startCursor: String
     $endCursor: String
+    $sortKey: ProductCollectionSortKeys
+    $reverse: Boolean
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
       id
@@ -190,7 +267,9 @@ const COLLECTION_QUERY = `#graphql
         first: $first,
         last: $last,
         before: $startCursor,
-        after: $endCursor
+        after: $endCursor,
+        sortKey: $sortKey,
+        reverse: $reverse
       ) {
         nodes {
           ...ProductItem

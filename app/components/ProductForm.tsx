@@ -1,11 +1,12 @@
 import {Link} from '@remix-run/react';
-import {type VariantOption, VariantSelector} from '@shopify/hydrogen';
+import {type VariantOption, VariantSelector, ShopPayButton} from '@shopify/hydrogen';
 import type {
   ProductFragment,
   ProductVariantFragment,
 } from 'storefrontapi.generated';
-import {AddToCartButton} from '~/components/AddToCartButton';
+import NewAddToCartButton from './CharlesAddToCartButton';
 import {useAside} from '~/components/Aside';
+import '../styles/shopStyle.css';
 
 export function ProductForm({
   product,
@@ -27,25 +28,36 @@ export function ProductForm({
         {({option}) => <ProductOptions key={option.name} option={option} />}
       </VariantSelector>
       <br />
-      <AddToCartButton
-        disabled={!selectedVariant || !selectedVariant.availableForSale}
-        onClick={() => {
-          open('cart');
-        }}
-        lines={
-          selectedVariant
-            ? [
-                {
-                  merchandiseId: selectedVariant.id,
-                  quantity: 1,
-                  selectedVariant,
-                },
-              ]
-            : []
-        }
-      >
-        {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
-      </AddToCartButton>
+      <div className='payment-options'>
+        <NewAddToCartButton
+          disabled={!selectedVariant || !selectedVariant.availableForSale}
+          onClick={() => {
+            open('cart');
+          }}
+          lines={
+            selectedVariant
+              ? [
+                  {
+                    merchandiseId: selectedVariant.id,
+                    quantity: 1,
+                    selectedVariant,
+                  },
+                ]
+              : []
+          }
+        >
+          {selectedVariant?.availableForSale 
+            ? `Add to cart - $${parseFloat(selectedVariant?.price.amount).toFixed(2)}`
+            : 'Sold out'
+          }
+        </NewAddToCartButton>
+        {selectedVariant && (
+          <ShopPayButton
+            variantIdsAndQuantities={[{id: selectedVariant.id, quantity:1}]}
+            storeDomain={`skylight-testing.myshopify.com`}
+          />
+        )}
+      </div>
     </div>
   );
 }
